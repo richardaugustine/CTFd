@@ -6,6 +6,7 @@
 		<h1>Scoreboard</h1>
 	</div>
 </div>
+
 <div class="container">
 	{% include "components/errors.html" %}
 
@@ -24,30 +25,46 @@
 					<tr>
 						<td scope="col" width="10px"><b>Place</b></td>
 						<td scope="col"><b>{{ get_mode_as_word(capitalize=True) }}</b></td>
+						<td scope="col"><b>Branch</b></td>
 						<td scope="col"><b>Score</b></td>
 					</tr>
 				</thead>
+
 				<tbody>
 				{% for standing in standings %}
 					<tr>
-						<th scope="row" class="text-center">{{ loop.index }}</th>
+						<th scope="row" class="text-center">
+							{{ loop.index }}
+						</th>
+
 						<td>
 							<a href="{{ generate_account_url(standing.account_id) }}">
 								{{ standing.name | truncate(50) }}
 
 								{% if standing.oauth_id %}
 									{% if Configs.user_mode == 'teams' %}
-									<a href="https://majorleaguecyber.org/t/{{ standing.name }}">
-										<span class="badge badge-primary">Official</span>
-									</a>
+										<a href="https://majorleaguecyber.org/t/{{ standing.name }}">
+											<span class="badge badge-primary">Official</span>
+										</a>
 									{% elif Configs.user_mode == 'users' %}
-									<a href="https://majorleaguecyber.org/u/{{ standing.name }}">
-										<span class="badge badge-primary">Official</span>
-									</a>
+										<a href="https://majorleaguecyber.org/u/{{ standing.name }}">
+											<span class="badge badge-primary">Official</span>
+										</a>
 									{% endif %}
 								{% endif %}
 							</a>
 						</td>
+
+						<td>
+							{% set branch = '-' %}
+							{% for field in standing.fields %}
+								{% if field.name == 'Branch' %}
+									{% set branch = field.value %}
+								{% endif %}
+							{% endfor %}
+							{{ branch }}
+						</td>
+
 						<td>{{ standing.score }}</td>
 					</tr>
 				{% endfor %}
