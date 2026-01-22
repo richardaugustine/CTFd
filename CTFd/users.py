@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, url_for
+from sqlalchemy import or_
 
-from CTFd.models import Users
-from CTFd.models.user_fields import UserFields
+from CTFd.models import Users, db
+from CTFd.models.user_fields import UserFields, UserFieldEntries
 from CTFd.utils import config
 from CTFd.utils.decorators import authed_only
 from CTFd.utils.decorators.visibility import (
@@ -24,34 +25,37 @@ def listing():
 
     filters = []
     if q:
-        filters.append(getattr(Users, field).like(f"%{q}%"))
+        filters.append(or_(
+            Users.name.like(f"%{q}%"),
+            Users.affiliation.like(f"%{q}%"),
+            Users.website.like(f"%{q}%")
+        ))
 
     users_pagination = (
         Users.query
         .filter_by(banned=False, hidden=False)
         .filter(*filters)
-        .order_by(Users.id.asc())
+        .order_by(Users.name.asc(), Users.id.asc())
         .paginate(per_page=50, error_out=False)
     )
 
-    # 🔹 Load Branch custom field safely
+    # Load Branch custom field using UserFieldEntries
     user_ids = [u.id for u in users_pagination.items]
-
-    branches = {
-        uf.user_id: uf.value
-        for uf in UserFields.query
-        .filter(
-            UserFields.name == "Branch",
-            UserFields.user_id.in_(user_ids),
-        )
-        .all()
-    }
+    branches = {}
+    
+    branch_field_id = db.session.query(UserFields.id).filter_by(name="Branch").scalar()
+    if branch_field_id and user_ids:
+        entries = db.session.query(UserFieldEntries).filter(
+            UserFieldEntries.field_id == branch_field_id,
+            UserFieldEntries.user_id.in_(user_ids)
+        ).all()
+        branches = {entry.user_id: entry.value for entry in entries}
 
     for user in users_pagination.items:
         user.branch = branches.get(user.id, "-")
 
     args = dict(request.args)
-    args.pop("page", 1)
+    args.pop("page", None)
 
     return render_template(
         "users/users.html",
@@ -97,12 +101,17 @@ def public(user_id):
         hidden=False,
     ).first_or_404()
 
-    branch = (
-        UserFields.query
-        .filter_by(user_id=user.id, name="Branch")
-        .first()
-    )
-    user.branch = branch.value if branch else "-"
+    # Load Branch for single user
+    branch_field_id = db.session.query(UserFields.id).filter_by(name="Branch").scalar()
+    branch_value = "-"
+    if branch_field_id:
+        branch_entry = db.session.query(UserFieldEntries).filter_by(
+            field_id=branch_field_id, 
+            user_id=user.id
+        ).first()
+        if branch_entry:
+            branch_value = branch_entry.value
+    user.branch = branch_value
 
     if config.is_scoreboard_frozen():
         infos.append("Scoreboard has been frozen")
