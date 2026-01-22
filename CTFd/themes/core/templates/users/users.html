@@ -76,10 +76,10 @@
                 {% endif %}
               </td>
 
-              <!-- ✅ BRANCH (FIXED) -->
+              <!-- ✅ BRANCH (SAFE & WORKING) -->
               <td>
                 {% set branch = '-' %}
-                {% for field in get_user_fields(user.id) %}
+                {% for field in user.get_fields() %}
                   {% if field.name == 'Branch' %}
                     {% set branch = field.value %}
                   {% endif %}
