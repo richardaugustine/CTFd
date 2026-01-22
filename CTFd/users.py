@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, url_for
 
-from CTFd.models import Users, UserField
+from CTFd.models import Users, UserFields
 from CTFd.utils import config
 from CTFd.utils.decorators import authed_only
 from CTFd.utils.decorators.visibility import (
@@ -33,13 +33,16 @@ def listing():
         .paginate(per_page=50, error_out=False)
     )
 
-    # 🔹 ATTACH BRANCH FIELD TO EACH USER (FIX)
+    # ✅ Load Branch field for each user (CORRECT MODEL)
     user_ids = [u.id for u in users_pagination.items]
 
     branches = {
         uf.user_id: uf.value
-        for uf in UserField.query
-        .filter(UserField.name == "Branch", UserField.user_id.in_(user_ids))
+        for uf in UserFields.query
+        .filter(
+            UserFields.name == "Branch",
+            UserFields.user_id.in_(user_ids),
+        )
         .all()
     }
 
@@ -90,12 +93,12 @@ def public(user_id):
     user = Users.query.filter_by(
         id=user_id,
         banned=False,
-        hidden=False
+        hidden=False,
     ).first_or_404()
 
-    # 🔹 ATTACH BRANCH FOR PROFILE PAGE (CONSISTENT)
+    # ✅ Attach Branch for profile page
     branch = (
-        UserField.query
+        UserFields.query
         .filter_by(user_id=user.id, name="Branch")
         .first()
     )
