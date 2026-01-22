@@ -62,20 +62,24 @@
                 {% endif %}
 
                 {% if user.bracket_id %}
-                  <span class="badge bg-secondary ms-2">{{ user.bracket.name }}</span>
+                  <span class="badge bg-secondary ms-2">
+                    {{ user.bracket.name }}
+                  </span>
                 {% endif %}
 
                 {% if user.oauth_id %}
                   <a href="https://majorleaguecyber.org/u/{{ user.name }}">
-                    <span class="badge bg-primary ms-2">{% trans %}Official{% endtrans %}</span>
+                    <span class="badge bg-primary ms-2">
+                      {% trans %}Official{% endtrans %}
+                    </span>
                   </a>
                 {% endif %}
               </td>
 
-              <!-- BRANCH COLUMN -->
+              <!-- ✅ BRANCH (FIXED) -->
               <td>
                 {% set branch = '-' %}
-                {% for field in user.fields %}
+                {% for field in get_user_fields(user.id) %}
                   {% if field.name == 'Branch' %}
                     {% set branch = field.value %}
                   {% endif %}
@@ -101,7 +105,9 @@
 
             <select class="page-select">
               {% for page in range(1, users.pages + 1) %}
-                <option {% if users.page == page %}selected{% endif %}>{{ page }}</option>
+                <option {% if users.page == page %}selected{% endif %}>
+                  {{ page }}
+                </option>
               {% endfor %}
             </select>
 
