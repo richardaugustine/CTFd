@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, url_for
 
-from CTFd.models import Users
+from CTFd.models import Users, UserField
 from CTFd.utils import config
 from CTFd.utils.decorators import authed_only
 from CTFd.utils.decorators.visibility import (
@@ -23,23 +23,37 @@ def listing():
 
     filters = []
     if q:
-        filters.append(getattr(Users, field).like("%{}%".format(q)))
+        filters.append(getattr(Users, field).like(f"%{q}%"))
 
-    users = (
-        Users.query.filter_by(banned=False, hidden=False)
+    users_pagination = (
+        Users.query
+        .filter_by(banned=False, hidden=False)
         .filter(*filters)
         .order_by(Users.id.asc())
         .paginate(per_page=50, error_out=False)
     )
+
+    # 🔹 ATTACH BRANCH FIELD TO EACH USER (FIX)
+    user_ids = [u.id for u in users_pagination.items]
+
+    branches = {
+        uf.user_id: uf.value
+        for uf in UserField.query
+        .filter(UserField.name == "Branch", UserField.user_id.in_(user_ids))
+        .all()
+    }
+
+    for user in users_pagination.items:
+        user.branch = branches.get(user.id, "-")
 
     args = dict(request.args)
     args.pop("page", 1)
 
     return render_template(
         "users/users.html",
-        users=users,
-        prev_page=url_for(request.endpoint, page=users.prev_num, **args),
-        next_page=url_for(request.endpoint, page=users.next_num, **args),
+        users=users_pagination,
+        prev_page=url_for(request.endpoint, page=users_pagination.prev_num, **args),
+        next_page=url_for(request.endpoint, page=users_pagination.next_num, **args),
         q=q,
         field=field,
     )
@@ -72,11 +86,28 @@ def private():
 def public(user_id):
     infos = get_infos()
     errors = get_errors()
-    user = Users.query.filter_by(id=user_id, banned=False, hidden=False).first_or_404()
+
+    user = Users.query.filter_by(
+        id=user_id,
+        banned=False,
+        hidden=False
+    ).first_or_404()
+
+    # 🔹 ATTACH BRANCH FOR PROFILE PAGE (CONSISTENT)
+    branch = (
+        UserField.query
+        .filter_by(user_id=user.id, name="Branch")
+        .first()
+    )
+    user.branch = branch.value if branch else "-"
 
     if config.is_scoreboard_frozen():
         infos.append("Scoreboard has been frozen")
 
     return render_template(
-        "users/public.html", user=user, account=user.account, infos=infos, errors=errors
+        "users/public.html",
+        user=user,
+        account=user.account,
+        infos=infos,
+        errors=errors,
     )
