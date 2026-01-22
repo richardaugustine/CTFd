@@ -6,6 +6,7 @@
       <h1>{% trans %}Users{% endtrans %}</h1>
     </div>
   </div>
+
   <div class="container">
     <div class="row">
       <div class="col-md-12">
@@ -42,13 +43,12 @@
       <div class="col-md-12">
         <table class="table table-striped align-middle">
           <thead>
-          <tr>
-            <th>{% trans %}User{% endtrans %}</th>
-            <th>{% trans %}Website{% endtrans %}</th>
-            <th class="d-none d-md-table-cell">{% trans %}Affiliation{% endtrans %}</th>
-            <th class="d-none d-md-table-cell">{% trans %}Country{% endtrans %}</th>
-          </tr>
+            <tr>
+              <th>{% trans %}User{% endtrans %}</th>
+              <th>{% trans %}Branch{% endtrans %}</th>
+            </tr>
           </thead>
+
           <tbody>
           {% for user in users.items %}
             <tr>
@@ -72,37 +72,15 @@
                 {% endif %}
               </td>
 
-              <td class="text-center" style="width: 10px;">
-                {% if user.website and (user.website.startswith('http://') or user.website.startswith('https://')) %}
-                  <a href="{{ user.website }}" target="_blank" rel="noopener">
-                    <i
-                        class="fas fa-external-link-alt" data-toggle="tooltip" data-placement="top"
-                        title="{{ user.website }}"
-                    ></i>
-                  </a>
-                {% endif %}
-              </td>
-
-              <td class="d-none d-md-table-cell d-lg-table-cell">
-                {% if user.affiliation %}
-                  {% if user.affiliation | length > 50 %}
-                    <span data-toggle="tooltip" data-placement="top" title="{{ user.affiliation }}">
-									{% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
-								</span>
-                  {% else %}
-                    <span>
-									{% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
-								</span>
+              <!-- BRANCH COLUMN -->
+              <td>
+                {% set branch = '-' %}
+                {% for field in user.fields %}
+                  {% if field.name == 'Branch' %}
+                    {% set branch = field.value %}
                   {% endif %}
-                {% endif %}
-              </td>
-              <td class="d-none d-md-table-cell d-lg-table-cell">
-								<span>
-									{% if user.country %}
-                    <i class="flag-{{ user.country.lower() }}"></i>
-                    {{ lookup_country_code(user.country) }}
-                  {% endif %}
-								</span>
+                {% endfor %}
+                {{ branch }}
               </td>
             </tr>
           {% endfor %}
@@ -115,7 +93,7 @@
       <div class="row">
         <div class="col-md-12">
           <div class="text-center">
-            {% trans %}Page{% endtrans %} <br>
+            {% trans %}Page{% endtrans %}<br>
 
             {% if users.page != 1 %}
               <a href="{{ prev_page }}">&lt;&lt;&lt;</a>
