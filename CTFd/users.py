@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, url_for
 from sqlalchemy import or_
 
 from CTFd.models import Users, db
-from CTFd.models.user_fields import UserFields, UserFieldEntries
+from CTFd.models import UserFields, UserFieldEntries  # Fixed import path
 from CTFd.utils import config
 from CTFd.utils.decorators import authed_only
 from CTFd.utils.decorators.visibility import (
@@ -39,20 +39,20 @@ def listing():
         .paginate(per_page=50, error_out=False)
     )
 
-    # Load Branch custom field using UserFieldEntries
+    # Load branchname custom field using UserFieldEntries
     user_ids = [u.id for u in users_pagination.items]
     branches = {}
     
-    branch_field_id = db.session.query(UserFields.id).filter_by(name="Branch").scalar()
-    if branch_field_id and user_ids:
+    branch_field = UserFields.query.filter_by(name="branchname").first()
+    if branch_field and user_ids:
         entries = db.session.query(UserFieldEntries).filter(
-            UserFieldEntries.field_id == branch_field_id,
+            UserFieldEntries.field_id == branch_field.id,
             UserFieldEntries.user_id.in_(user_ids)
         ).all()
         branches = {entry.user_id: entry.value for entry in entries}
 
     for user in users_pagination.items:
-        user.branch = branches.get(user.id, "-")
+        user.branchname = branches.get(user.id, "-")
 
     args = dict(request.args)
     args.pop("page", None)
@@ -101,17 +101,17 @@ def public(user_id):
         hidden=False,
     ).first_or_404()
 
-    # Load Branch for single user
-    branch_field_id = db.session.query(UserFields.id).filter_by(name="Branch").scalar()
+    # Load branchname for single user
+    branch_field = UserFields.query.filter_by(name="branchname").first()
     branch_value = "-"
-    if branch_field_id:
+    if branch_field:
         branch_entry = db.session.query(UserFieldEntries).filter_by(
-            field_id=branch_field_id, 
+            field_id=branch_field.id, 
             user_id=user.id
         ).first()
         if branch_entry:
             branch_value = branch_entry.value
-    user.branch = branch_value
+    user.branchname = branch_value
 
     if config.is_scoreboard_frozen():
         infos.append("Scoreboard has been frozen")
